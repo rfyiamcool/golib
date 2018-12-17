@@ -3,7 +3,7 @@ package discovery
 import (
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
+	"context"
 	"log"
 	"time"
 

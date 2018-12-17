@@ -37,7 +37,7 @@ func TestBasic(t *testing.T) {
 	if len(response) == 0 {
 		t.Error("No service registered")
 	}
-	client.Unregister()
+	client.UnregisterAndDelete()
 	response, _ = client.ServicesByName("test")
 	if len(response) != 0 {
 		t.Error("Service not  unregistered")
