@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	TTL = 10 * time.Second
-
+	TTL             = 10 * time.Second
 	KeepAlivePeriod = 3 * time.Second
 )
 
@@ -97,7 +96,12 @@ func (e *RegisterCtl) Register() error {
 	return nil
 }
 
-func (e *RegisterCtl) Unregister() error {
+func (e *RegisterCtl) Unregister() {
+	e.cancel()
+	e.keepAliveTicker.Stop()
+}
+
+func (e *RegisterCtl) UnregisterAndDelete() error {
 	e.cancel()
 	e.keepAliveTicker.Stop()
 	_, err := e.etcdKApi.Delete(context.Background(), e.etcdKey, nil)
