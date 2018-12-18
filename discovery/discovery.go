@@ -1,9 +1,9 @@
 package discovery
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"context"
 	"log"
 	"time"
 
@@ -70,7 +70,7 @@ func (e *RegisterCtl) Register() error {
 	e.cancel = c
 
 	insertFunc := func() error {
-		_, err := e.etcdKApi.Set(context.Background(), e.etcdKey, string(val), &etcdClient.SetOptions{
+		_, err := e.etcdKApi.Set(ctx, e.etcdKey, string(val), &etcdClient.SetOptions{
 			TTL: TTL,
 		})
 		return err
