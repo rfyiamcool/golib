@@ -64,6 +64,7 @@ func (r *Retry) Ensure(ctx context.Context, do func() error) error {
 	return r.ensure(ctx, 0, do)
 }
 
+// retry times limit
 func (r *Retry) EnsureRetryTimes(ctx context.Context, times int, do func() error) error {
 	return r.ensure(ctx, times, do)
 }
