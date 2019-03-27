@@ -15,6 +15,10 @@ func SetOpenGID() {
 }
 
 func GetGID() uint64 {
+	if !openFlag {
+		return 0
+	}
+
 	b := make([]byte, 64)
 	b = b[:runtime.Stack(b, false)]
 	b = bytes.TrimPrefix(b, []byte("goroutine "))
