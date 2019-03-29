@@ -96,6 +96,10 @@ func (nc *InnotifyCenter) Register(key NCKey) *InnotifyHandler {
 	return nc.register(key, -1)
 }
 
+func (nc *InnotifyCenter) RegisterAtMostN(key NCKey, n int) *InnotifyHandler {
+	return nc.register(key, n)
+}
+
 // Remove handler after receive one Innotify
 func (nc *InnotifyCenter) RegisterOnce(key NCKey) *InnotifyHandler {
 	return nc.register(key, 1)
