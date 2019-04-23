@@ -1,7 +1,6 @@
 package latency
 
 import (
-	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -16,12 +15,14 @@ type Latency struct {
 	count          int64
 	sum            int64
 	flag           int32
+	block          bool
 	lastInsertTime time.Time
 }
 
-func NewLatency(timeout time.Duration) *Latency {
+func NewLatency(timeout time.Duration, block bool) *Latency {
 	return &Latency{
 		timeout: timeout,
+		block:   block,
 	}
 }
 
@@ -31,24 +32,41 @@ func (l *Latency) Push(value time.Duration) {
 		return
 	}
 
-	if !atomic.CompareAndSwapInt32(&l.flag, free, working) {
+	if !l.Lock() {
 		return
 	}
 
 	if time.Now().Sub(l.lastInsertTime) >= l.timeout {
-		l.reset()
+		l.count = 0
+		l.sum = 0
 	}
 
 	l.count++
 	l.sum += t
 
 	l.lastInsertTime = time.Now()
-	atomic.StoreInt32(&l.flag, free)
+	l.Release()
 }
 
-func (l *Latency) reset() {
+func (l *Latency) Reset() {
 	l.count = 0
 	l.sum = 0
+}
+
+func (l *Latency) Lock() bool {
+	if !l.block {
+		return atomic.CompareAndSwapInt32(&l.flag, free, working)
+	}
+
+	for {
+		if atomic.CompareAndSwapInt32(&l.flag, free, working) {
+			return true
+		}
+	}
+}
+
+func (l *Latency) Release() {
+	atomic.StoreInt32(&l.flag, free)
 }
 
 func (l *Latency) Calc() time.Duration {
@@ -57,5 +75,5 @@ func (l *Latency) Calc() time.Duration {
 	}
 
 	avg := l.sum / l.count
-	return time.Duration(avg)
+	return time.Duration(avg) * time.Microsecond
 }
