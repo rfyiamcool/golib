@@ -174,9 +174,13 @@ func Send(request *Request) (*Response, error) {
 	return r, err
 }
 
+func makeJsonHeader(header map[string]string) {
+	header["Content-Type"] = "application/json"
+}
+
 func PostBody(url string, header map[string]string, data []byte) (*Response, error) {
 	req := NewRequest(url, MethodGet, header, nil, data)
-	req.Header["Content-Type"] = "application/json"
+	makeJsonHeader(req.Header)
 	resp, err := Send(req)
 	return resp, err
 }
