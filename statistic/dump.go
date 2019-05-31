@@ -15,9 +15,15 @@ type Bucket struct {
 	Frequency float64
 }
 
+var (
+	pctls = []int{10, 25, 50, 75, 90, 95, 99}
+)
+
 func Latencies(latencies []float64) []LatencyDistribution {
-	pctls := []int{10, 25, 50, 75, 90, 95, 99}
-	data := make([]float64, len(pctls))
+	var (
+		data = make([]float64, len(pctls))
+	)
+
 	j := 0
 	for i := 0; i < len(latencies) && j < len(pctls); i++ {
 		current := i * 100 / len(latencies)
