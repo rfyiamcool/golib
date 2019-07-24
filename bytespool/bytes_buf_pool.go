@@ -53,7 +53,7 @@ func Alloc(size int32) []byte {
 
 func Free(b []byte) {
 	size := int32(cap(b))
-	b = b[0:cap(b)]
+	b = b[:0]
 	for i := numPools - 1; i >= 0; i-- {
 		if size >= poolSize[i] {
 			pool[i].Put(b)
