@@ -5,7 +5,6 @@ import (
 )
 
 type Semaphore struct {
-	locked  bool
 	slots   chan struct{}
 	timeout time.Duration
 }
@@ -26,7 +25,6 @@ func NewSemaphore(count int, timeout time.Duration) *Semaphore {
 func (sem *Semaphore) Acquire() bool {
 	if sem.timeout == 0 {
 		<-sem.slots
-		sem.locked = true
 		return true
 	}
 
@@ -35,7 +33,6 @@ func (sem *Semaphore) Acquire() bool {
 
 	select {
 	case <-sem.slots:
-		sem.locked = true
 		return true
 	case <-tm.C:
 		return false
@@ -45,7 +42,6 @@ func (sem *Semaphore) Acquire() bool {
 func (sem *Semaphore) TryAcquire() bool {
 	select {
 	case <-sem.slots:
-		sem.locked = true
 		return true
 	default:
 		return false
@@ -53,19 +49,13 @@ func (sem *Semaphore) TryAcquire() bool {
 }
 
 func (sem *Semaphore) Release() {
-	if sem.locked {
-		sem.slots <- struct{}{}
-		sem.locked = false
-		return
+	select {
+	case sem.slots <- struct{}{}:
+	default:
+		panic("can not release")
 	}
-
-	panic("can not release")
 }
 
-func (sem *Semaphore) Size() int {
+func (sem *Semaphore) SpareSem() int {
 	return len(sem.slots)
-}
-
-func (sem *Semaphore) IsLocked() bool {
-	return sem.locked
 }
