@@ -12,6 +12,18 @@ func ResetDefaultTimeWheel(tw *TimeWheel) {
 	DefaultTimeWheel = tw
 }
 
+func Add(delay time.Duration, callback func()) (*Task, error) {
+	return DefaultTimeWheel.Add(delay, callback)
+}
+
+func AddCron(delay time.Duration, callback func()) (*Task, error) {
+	return DefaultTimeWheel.AddCron(delay, callback)
+}
+
+func Remove(task *Task) error {
+	return DefaultTimeWheel.Remove(task)
+}
+
 func NewTimer(delay time.Duration) *Timer {
 	return DefaultTimeWheel.NewTimer(delay)
 }
