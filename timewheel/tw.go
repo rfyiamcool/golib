@@ -203,20 +203,47 @@ func (tw *TimeWheel) remove(id taskID) {
 }
 
 func (tw *TimeWheel) NewTimer(delay time.Duration) *Timer {
-	queue := make(chan bool, 1)
+	queue := make(chan bool, 1) // buf = 1, refer to src/time/sleep.go
 	task, _ := tw.Add(delay,
 		func() {
 			notfiyChannel(queue)
 		},
 	)
-	task.async = false
+	task.async = false // refer to src/runtime/time.go
+
+	// init timer
+	ctx, cancel := context.WithCancel(context.Background())
 	timer := &Timer{
-		tw:   tw,
-		C:    queue, // faster
-		task: task,
+		tw:     tw,
+		C:      queue, // faster
+		task:   task,
+		Ctx:    ctx,
+		cancel: cancel,
 	}
 
 	return timer
+}
+
+func (tw *TimeWheel) NewTicker(delay time.Duration) *Ticker {
+	queue := make(chan bool, 1)
+	task, _ := tw.AddCron(delay,
+		func() {
+			notfiyChannel(queue)
+		},
+	)
+	task.async = false
+
+	// init ticker
+	ctx, cancel := context.WithCancel(context.Background())
+	ticker := &Ticker{
+		task:   task,
+		tw:     tw,
+		C:      queue,
+		Ctx:    ctx,
+		cancel: cancel,
+	}
+
+	return ticker
 }
 
 func (tw *TimeWheel) After(delay time.Duration) chan<- bool {
@@ -243,8 +270,11 @@ func (tw *TimeWheel) Sleep(delay time.Duration) {
 type Timer struct {
 	task *Task
 	tw   *TimeWheel
-	C    chan bool
 	fn   func()
+	C    chan bool
+
+	cancel context.CancelFunc
+	Ctx    context.Context
 }
 
 func (t *Timer) callback(q chan bool) {
@@ -265,29 +295,8 @@ func (t *Timer) Reset(delay time.Duration) {
 
 func (t *Timer) Stop() {
 	t.task.stop = true
+	t.cancel()
 	t.tw.Remove(t.task)
-}
-
-func (tw *TimeWheel) NewTicker(delay time.Duration) *Ticker {
-	queue := make(chan bool, 1)
-	task, _ := tw.AddCron(delay,
-		func() {
-			notfiyChannel(queue)
-		},
-	)
-	task.async = false
-
-	// init ticker
-	ctx, cancel := context.WithCancel(context.Background())
-	ticker := &Ticker{
-		task:   task,
-		tw:     tw,
-		C:      queue,
-		Ctx:    ctx,
-		cancel: cancel,
-	}
-
-	return ticker
 }
 
 type Ticker struct {
@@ -301,8 +310,8 @@ type Ticker struct {
 
 func (t *Ticker) Stop() {
 	t.task.stop = true
-	t.tw.Remove(t.task)
 	t.cancel()
+	t.tw.Remove(t.task)
 }
 
 func notfiyChannel(q chan bool) {
