@@ -12,10 +12,6 @@ const (
 	typeTicker
 )
 
-var (
-	DefaultTimeWheel, _ = NewTimeWheel(time.Second, 120)
-)
-
 type taskType int64
 
 type taskID int64
