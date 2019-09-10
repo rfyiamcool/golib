@@ -35,6 +35,25 @@ func TestAdd(t *testing.T) {
 	tw.Stop()
 }
 
+func TestAdd100ms(t *testing.T) {
+	tw := newTimeWheel()
+	defer tw.Stop()
+
+	now := time.Now()
+	q := make(chan bool, 2)
+	_, err := tw.Add(100*time.Millisecond, func() {
+		q <- true
+	})
+	if err != nil {
+		t.Fatalf("test add failed, %v", err)
+	}
+
+	<-q
+	if time.Since(now).Seconds() < 1 {
+		t.Fatal("< 1s")
+	}
+}
+
 func TestCron(t *testing.T) {
 	tw := newTimeWheel()
 	_, err := tw.AddCron(time.Second*1, callback)

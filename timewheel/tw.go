@@ -46,7 +46,7 @@ type TimeWheel struct {
 
 // NewTimeWheel create new time wheel
 func NewTimeWheel(tick time.Duration, bucketsNum int) (*TimeWheel, error) {
-	if tick <= 0 || bucketsNum <= 0 {
+	if tick.Seconds() < 1 || bucketsNum <= 0 {
 		return nil, errors.New("invalid params")
 	}
 
