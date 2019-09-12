@@ -277,19 +277,9 @@ type Timer struct {
 	Ctx    context.Context
 }
 
-func (t *Timer) callback(q chan bool) {
-	select {
-	case q <- true:
-	default:
-	}
-}
-
 func (t *Timer) Reset(delay time.Duration) {
-	// dont't direct use t.C
-	queue := make(chan bool, 1)
-	t.C = queue
 	t.tw.Add(delay, func() {
-		t.callback(queue)
+		notfiyChannel(t.C)
 	})
 }
 
