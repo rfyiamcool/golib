@@ -5,10 +5,10 @@ import "testing"
 func TestQueueSimple(t *testing.T) {
 	q := New()
 
-	for i := 0; i < minQueueLen; i++ {
+	for i := 0; i < defaultMinQueueLen; i++ {
 		q.Add(i)
 	}
-	for i := 0; i < minQueueLen; i++ {
+	for i := 0; i < defaultMinQueueLen; i++ {
 		if q.Peek().(int) != i {
 			t.Error("peek", i, "had value", q.Peek())
 		}
@@ -22,15 +22,15 @@ func TestQueueSimple(t *testing.T) {
 func TestQueueWrapping(t *testing.T) {
 	q := New()
 
-	for i := 0; i < minQueueLen; i++ {
+	for i := 0; i < defaultMinQueueLen; i++ {
 		q.Add(i)
 	}
 	for i := 0; i < 3; i++ {
 		q.Remove()
-		q.Add(minQueueLen + i)
+		q.Add(defaultMinQueueLen + i)
 	}
 
-	for i := 0; i < minQueueLen; i++ {
+	for i := 0; i < defaultMinQueueLen; i++ {
 		if q.Peek().(int) != i+3 {
 			t.Error("peek", i, "had value", q.Peek())
 		}
