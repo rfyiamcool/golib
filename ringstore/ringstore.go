@@ -35,6 +35,10 @@ func (q *RingStore) GetItems() []interface{} {
 		head = q.head
 	)
 
+	if len(q.buf) == 0 {
+		return list
+	}
+
 	for index := 0; index < q.size; index++ {
 		ret := q.buf[head]
 		head = q.next(head)

@@ -26,3 +26,15 @@ func TestRingStore(t *testing.T) {
 
 	assert.Equal(t, size, q.Len())
 }
+
+func TestRingStore0(t *testing.T) {
+	size := 10
+	q := NewRingStore(size)
+
+	fmt.Println("len: ", q.Len())
+	fmt.Println("source buf: ", q.buf)
+	fmt.Println("get items: ", q.GetItems())
+
+	assert.Equal(t, 0, q.Len())
+}
+
