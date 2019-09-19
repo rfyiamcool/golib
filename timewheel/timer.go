@@ -3,6 +3,7 @@ package timewheel
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -39,6 +40,8 @@ type TimeWheel struct {
 
 	currentIndex int
 
+	onceStart sync.Once
+
 	addC    chan *Task
 	removeC chan taskID
 	stopC   chan struct{}
@@ -70,11 +73,16 @@ func NewTimeWheel(tick time.Duration, bucketsNum int) (*TimeWheel, error) {
 
 // Start start the time wheel
 func (tw *TimeWheel) Start() {
-	tw.ticker = time.NewTicker(tw.tick)
-	go tw.start()
+	// onlye once start
+	tw.onceStart.Do(
+		func() {
+			tw.ticker = time.NewTicker(tw.tick)
+			go tw.schduler()
+		},
+	)
 }
 
-func (tw *TimeWheel) start() {
+func (tw *TimeWheel) schduler() {
 	for {
 		select {
 		case <-tw.ticker.C:
@@ -139,21 +147,21 @@ func (tw *TimeWheel) handleTick() {
 }
 
 // Add add an item into time wheel
-func (tw *TimeWheel) Add(delay time.Duration, callback func()) (*Task, error) {
+func (tw *TimeWheel) Add(delay time.Duration, callback func()) *Task {
 	if delay <= 0 {
-		return nil, errors.New("invalid params")
+		delay = tw.tick
 	}
 
 	id := tw.genUniqueID()
 	task := &Task{delay: delay, id: id, callback: callback}
 	tw.addC <- task
 
-	return task, nil
+	return task
 }
 
-func (tw *TimeWheel) AddCron(delay time.Duration, callback func()) (*Task, error) {
+func (tw *TimeWheel) AddCron(delay time.Duration, callback func()) *Task {
 	if delay <= 0 {
-		return nil, errors.New("invalid params")
+		delay = tw.tick
 	}
 
 	id := tw.genUniqueID()
@@ -164,7 +172,7 @@ func (tw *TimeWheel) AddCron(delay time.Duration, callback func()) (*Task, error
 		circle:   true,
 	}
 	tw.addC <- task
-	return task, nil
+	return task
 }
 
 func (tw *TimeWheel) add(task *Task) {
@@ -204,7 +212,7 @@ func (tw *TimeWheel) remove(id taskID) {
 
 func (tw *TimeWheel) NewTimer(delay time.Duration) *Timer {
 	queue := make(chan bool, 1) // buf = 1, refer to src/time/sleep.go
-	task, _ := tw.Add(delay,
+	task := tw.Add(delay,
 		func() {
 			notfiyChannel(queue)
 		},
@@ -226,7 +234,7 @@ func (tw *TimeWheel) NewTimer(delay time.Duration) *Timer {
 
 func (tw *TimeWheel) NewTicker(delay time.Duration) *Ticker {
 	queue := make(chan bool, 1)
-	task, _ := tw.AddCron(delay,
+	task := tw.AddCron(delay,
 		func() {
 			notfiyChannel(queue)
 		},
@@ -278,9 +286,11 @@ type Timer struct {
 }
 
 func (t *Timer) Reset(delay time.Duration) {
-	t.tw.Add(delay, func() {
+	task := t.tw.Add(delay, func() {
 		notfiyChannel(t.C)
 	})
+
+	t.task = task
 }
 
 func (t *Timer) Stop() {

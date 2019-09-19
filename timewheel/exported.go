@@ -8,15 +8,20 @@ var (
 	DefaultTimeWheel, _ = NewTimeWheel(time.Second, 120)
 )
 
+func init() {
+	DefaultTimeWheel.Start()
+}
+
 func ResetDefaultTimeWheel(tw *TimeWheel) {
+	tw.Start()
 	DefaultTimeWheel = tw
 }
 
-func Add(delay time.Duration, callback func()) (*Task, error) {
+func Add(delay time.Duration, callback func()) *Task {
 	return DefaultTimeWheel.Add(delay, callback)
 }
 
-func AddCron(delay time.Duration, callback func()) (*Task, error) {
+func AddCron(delay time.Duration, callback func()) *Task {
 	return DefaultTimeWheel.AddCron(delay, callback)
 }
 

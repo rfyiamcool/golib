@@ -27,10 +27,7 @@ func newTimeWheel() *TimeWheel {
 
 func TestAdd(t *testing.T) {
 	tw := newTimeWheel()
-	_, err := tw.Add(time.Second*1, callback)
-	if err != nil {
-		t.Fatalf("test add failed, %v", err)
-	}
+	tw.Add(time.Second*1, callback)
 	time.Sleep(time.Second * 5)
 	tw.Stop()
 }
@@ -41,12 +38,9 @@ func TestAdd100ms(t *testing.T) {
 
 	now := time.Now()
 	q := make(chan bool, 2)
-	_, err := tw.Add(100*time.Millisecond, func() {
+	tw.Add(100*time.Millisecond, func() {
 		q <- true
 	})
-	if err != nil {
-		t.Fatalf("test add failed, %v", err)
-	}
 
 	<-q
 	if time.Since(now).Seconds() < 1 {
@@ -56,10 +50,7 @@ func TestAdd100ms(t *testing.T) {
 
 func TestCron(t *testing.T) {
 	tw := newTimeWheel()
-	_, err := tw.AddCron(time.Second*1, callback)
-	if err != nil {
-		t.Fatalf("test add failed, %v", err)
-	}
+	tw.AddCron(time.Second*1, callback)
 	time.Sleep(time.Second * 5)
 	tw.Stop()
 }
@@ -133,10 +124,7 @@ func TestTimerReset(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	tw := newTimeWheel()
-	task, err := tw.Add(time.Second*1, callback)
-	if err != nil {
-		t.Fatalf("test add failed, %v", err)
-	}
+	task := tw.Add(time.Second*1, callback)
 	tw.Remove(task)
 	time.Sleep(time.Second * 5)
 	tw.Stop()
@@ -182,9 +170,6 @@ func TestHwTimer(t *testing.T) {
 func BenchmarkAdd(b *testing.B) {
 	tw := newTimeWheel()
 	for i := 0; i < b.N; i++ {
-		_, err := tw.Add(time.Second, callback)
-		if err != nil {
-			b.Fatalf("benchmark Add failed, %v", err)
-		}
+		tw.Add(time.Second, callback)
 	}
 }
