@@ -37,6 +37,12 @@ type InnotifyHandler struct {
 	Ch  chan interface{}
 }
 
+var instance = NewInnotifyCenter()
+
+func DefaultCenter() *InnotifyCenter {
+	return instance
+}
+
 func newInnotifyHandler(nc *InnotifyCenter, key NCKey, count int) *InnotifyHandler {
 	return &InnotifyHandler{
 		nc:    nc,
@@ -57,28 +63,7 @@ func NewInnotifyCenter() *InnotifyCenter {
 		lock:  &sync.RWMutex{},
 	}
 
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-
-			n.lock.Lock()
-			knum := 0
-			vnum := 0
-			for _, v := range n.cache {
-				knum++
-				vnum += len(v)
-			}
-			n.lock.Unlock()
-		}
-	}()
-
 	return n
-}
-
-var instance = NewInnotifyCenter()
-
-func DefaultCenter() *InnotifyCenter {
-	return instance
 }
 
 func (nc *InnotifyCenter) Remove(nh *InnotifyHandler) (rm bool) {
