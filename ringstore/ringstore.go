@@ -29,6 +29,29 @@ func (q *RingStore) Len() int {
 	return q.count
 }
 
+func (q *RingStore) GetLimitItems(n int) []interface{} {
+	var (
+		list []interface{}
+		tail = q.prev(q.tail)
+	)
+
+	if len(q.buf) == 0 {
+		return list
+	}
+
+	if n > q.count {
+		n = q.count
+	}
+
+	for index := 0; index < n; index++ {
+		ret := q.buf[tail]
+		tail = q.prev(tail)
+		list = append(list, ret)
+	}
+
+	return q.aesOrder(list)
+}
+
 func (q *RingStore) GetItems() []interface{} {
 	var (
 		list []interface{}
@@ -145,4 +168,12 @@ func (q *RingStore) resize() {
 	q.head = 0
 	q.tail = q.count
 	q.buf = newBuf
+}
+
+func (q *RingStore) aesOrder(s []interface{}) []interface{} {
+	for from, to := 0, len(s)-1; from < to; from, to = from+1, to-1 {
+		s[from], s[to] = s[to], s[from]
+	}
+
+	return s
 }
