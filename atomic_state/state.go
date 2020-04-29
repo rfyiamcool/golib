@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	setFlag   int32 = 1
-	unsetFlag int32 = 0
+	SetFlag   int32 = 1
+	UnsetFlag int32 = 0
 )
 
 func SetFlag(n *int32) bool {
