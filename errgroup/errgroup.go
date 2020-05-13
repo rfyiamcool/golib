@@ -8,6 +8,17 @@ import (
 // modify err returned
 // refer golang.org/x/sync/errgroup
 
+func ConvertQueue(l interface{}) chan interface{} {
+	s := reflect.ValueOf(l)
+	c := make(chan interface{}, s.Len())
+
+	for i := 0; i < s.Len(); i++ {
+		c <- s.Index(i).Interface()
+	}
+	close(c)
+	return c
+}
+
 type Group struct {
 	cancel func()
 
@@ -17,18 +28,11 @@ type Group struct {
 	errs []error
 }
 
-// WithContext returns a new Group and an associated Context derived from ctx.
-//
-// The derived Context is canceled the first time a function passed to Go
-// returns a non-nil error or the first time Wait returns, whichever occurs
-// first.
 func WithContext(ctx context.Context) (*Group, context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Group{cancel: cancel}, ctx
 }
 
-// Wait blocks until all function calls from the Go method have returned, then
-// returns the first non-nil error (if any) from them.
 func (g *Group) WaitOK() ([]error, bool) {
 	g.wg.Wait()
 	if g.cancel != nil {
