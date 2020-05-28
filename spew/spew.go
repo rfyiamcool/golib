@@ -2,6 +2,8 @@ package spew
 
 import (
 	"fmt"
+	"runtime"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/fatih/color"
@@ -66,5 +68,40 @@ func Debugf(format string, v ...interface{}) {
 
 func Dump(v ...interface{}) {
 	s := spew.Sdump(v...)
-	color.Cyan(s)
+	file, no, funcName := getCaller(2)
+	color.Magenta("file: %s line: %d, funcname: %s message: %s", file, no, funcName, s)
+}
+
+func getCaller(skip int) (string, int, string) {
+	pc, file, line, ok := runtime.Caller(skip)
+	if !ok {
+		return "", 0, ""
+	}
+
+	var (
+		n        = 0
+		funcName string
+	)
+
+	// get package name
+	for i := len(file) - 1; i > 0; i-- {
+		if file[i] != '/' {
+			continue
+		}
+		n++
+		if n >= 2 {
+			file = file[i+1:]
+			break
+		}
+	}
+
+	fnpc := runtime.FuncForPC(pc)
+
+	if fnpc != nil {
+		fnNameStr := fnpc.Name()
+		parts := strings.Split(fnNameStr, ".")
+		funcName = parts[len(parts)-1]
+	}
+
+	return file, line, funcName
 }
