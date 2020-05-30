@@ -1,4 +1,4 @@
-package spew
+package dump
 
 import (
 	"fmt"
@@ -69,7 +69,13 @@ func Debugf(format string, v ...interface{}) {
 func Dump(v ...interface{}) {
 	s := spew.Sdump(v...)
 	file, no, funcName := getCaller(2)
-	color.Magenta("file: %s line: %d, funcname: %s message: %s", file, no, funcName, s)
+	color.Magenta("file: %s line: %d, funcname: %s, message: %s", file, no, funcName, s)
+}
+
+func Stack(v ...interface{}) {
+	stack := getStack()
+	v = append(v, "stack: %s", stack)
+	Debug(v...)
 }
 
 func getCaller(skip int) (string, int, string) {
@@ -104,4 +110,10 @@ func getCaller(skip int) (string, int, string) {
 	}
 
 	return file, line, funcName
+}
+
+func getStack() string {
+	buf := make([]byte, 4096)
+	n := runtime.Stack(buf, false)
+	return string(buf[:n])
 }
