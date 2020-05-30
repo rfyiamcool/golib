@@ -1,148 +1,300 @@
-package logger
+package log
 
 import (
-	"errors"
+	"bufio"
+	"bytes"
 	"fmt"
-	"log"
+	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
+
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	ErrInvalidLevel = errors.New("log level setting error")
+	hostName, _ = os.Hostname()
 
-	defaultStdout = os.Stdout
-	debugLogger   *log.Logger
-	infoLogger    *log.Logger
-	warnLogger    *log.Logger
-	errorLogger   *log.Logger
-	fatalLogger   *log.Logger
+	debugWriter, normalWriter io.Writer
+
+	glog = logrus.New()
+
+	// for purger
+	Log = glog.WithFields(logrus.Fields{
+		"role": "hke-control",
+	})
 )
 
-func init() {
-	reset()
+const NullLogPrefix = "$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+
+type Config struct {
+	Console  bool   `toml:"console"`
+	Type     string `toml:"type"`
+	Level    string `toml:"level"`
+	FileName string `toml:"filename"`
+	Path     string `toml:"path"`
+	Buffer   int    `toml:"buffer"`
+	MaxAge   int    `toml:"maxage"`
+	Rotation int    `toml:"rotation"`
 }
 
-func reset() {
-	debugLogger = log.New(defaultStdout, "[Debug] ", log.Ldate|log.Ltime|log.Lshortfile)
-	infoLogger = log.New(defaultStdout, "[Info] ", log.Ldate|log.Ltime|log.Lshortfile)
-	warnLogger = log.New(defaultStdout, "[Wain] ", log.Ldate|log.Ltime|log.Lshortfile)
-	errorLogger = log.New(defaultStdout, "[Error] ", log.Ldate|log.Ltime|log.Lshortfile)
-	fatalLogger = log.New(defaultStdout, "[Fatal] ", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-func SetStdoutFile(filePath string) error {
-	fileFd, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
-	if err != nil {
-		return err
+func InitLogger(c *Config) func() {
+	formatter := &DefaultFormatter{
+		TimestampFormat: "2006-01-02 15:04:05.000",
+		HostName:        hostName,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			return "", findCaller()
+		},
+		// CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+		// 	fileName := f.File[strings.Index(f.File, "pusher")+7:]
+		// 	return "", fmt.Sprintf("%s:%d", fileName, f.Line)
+		// },
 	}
 
-	defaultStdout = fileFd
-	reset()
-	return nil
-}
-
-func SetLevelWithDefault(lv, defaultLv string) {
-	err := SetLevel(lv)
-	if err != nil {
-		SetLevel(defaultLv)
-	}
-}
-
-func SetLevel(lv string) error {
-	if lv == "" {
-		return ErrInvalidLevel
-	}
-
-	var (
-		l     = strings.ToUpper(lv)
-		level int
+	glog.SetOutput(ioutil.Discard)
+	glog.SetFormatter(
+		// default std
+		&logrus.TextFormatter{
+			DisableColors:   false,
+			FullTimestamp:   true,
+			TimestampFormat: "2006-01-02 15:04:05.000",
+		},
+		// formatter,
 	)
 
-	switch l {
-	case "DEBUG":
-		level = 1
-	case "INFO":
-		level = 2
-	case "WARN":
-		level = 3
-	case "ERROR":
-		level = 4
-	case "FATAL":
-		level = 5
+	// open console stdout
+	if c.Console {
+		glog.SetOutput(os.Stdout)
+	}
+
+	var err error
+	if debugWriter, err = rotatelogs.New(
+		filepath.Join(c.Path, "debug.log.%Y%m%d"),
+		rotatelogs.WithLinkName(filepath.Join(c.Path, "debug.log")),
+		rotatelogs.WithMaxAge(time.Duration(c.MaxAge)*24*time.Hour),
+		rotatelogs.WithRotationTime(time.Duration(c.Rotation)*time.Hour),
+	); err != nil {
+		panic(err)
+	}
+
+	if normalWriter, err = rotatelogs.New(
+		filepath.Join(c.Path, c.FileName+".%Y%m%d"),
+		rotatelogs.WithLinkName(filepath.Join(c.Path, c.FileName)),
+		rotatelogs.WithMaxAge(time.Duration(c.MaxAge)*24*time.Hour),
+		rotatelogs.WithRotationTime(time.Duration(c.Rotation)*time.Hour),
+	); err != nil {
+		panic(err)
+	}
+
+	if c.Buffer > 0 {
+		debugWriter = bufio.NewWriterSize(debugWriter, c.Buffer)
+		normalWriter = bufio.NewWriterSize(normalWriter, c.Buffer)
+	}
+
+	lfHook := lfshook.NewHook(
+		lfshook.WriterMap{
+			logrus.DebugLevel: normalWriter,
+			logrus.InfoLevel:  normalWriter,
+			logrus.WarnLevel:  normalWriter,
+			logrus.ErrorLevel: normalWriter,
+			logrus.FatalLevel: normalWriter,
+			logrus.PanicLevel: normalWriter,
+		},
+		&logrus.TextFormatter{DisableColors: true, TimestampFormat: "2006-01-02 15:04:05"},
+	)
+
+	switch c.Type {
+	case "json":
+		lfHook.SetFormatter(&logrus.JSONFormatter{})
+	case "text":
+		lfHook.SetFormatter(&logrus.TextFormatter{
+			DisableColors:   true,
+			TimestampFormat: "2006-01-02 15:04:05",
+		})
 	default:
-		level = 6
+		lfHook.SetFormatter(formatter)
 	}
 
-	if level == 6 {
-		return ErrInvalidLevel
+	switch c.Level {
+	case "debug":
+		glog.SetLevel(logrus.DebugLevel)
+	case "info":
+		glog.SetLevel(logrus.InfoLevel)
+	case "warn":
+		glog.SetLevel(logrus.WarnLevel)
+	case "error":
+		glog.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		glog.SetLevel(logrus.FatalLevel)
+	case "panic":
+		glog.SetLevel(logrus.PanicLevel)
+	default:
+		glog.SetLevel(logrus.InfoLevel)
 	}
 
-	return nil
+	glog.AddHook(lfHook)
+
+	return Flush
 }
 
-func Debug(format string, v ...interface{}) {
-	if 1 >= level {
-		debugLogger.Output(2, fmt.Sprintf(format, v...))
+// only used for buffer log
+func Flush() {
+	if buffWriter, ok := debugWriter.(*bufio.Writer); ok {
+		buffWriter.Flush()
 	}
-}
 
-func Info(format string, v ...interface{}) {
-	if 2 >= level {
-		infoLogger.Output(2, fmt.Sprintf(format, v...))
-	}
-}
-
-func Warn(format string, v ...interface{}) {
-	if 3 >= level {
-		warnLogger.Output(2, fmt.Sprintf(format, v...))
-	}
-}
-
-func Error(format string, v ...interface{}) {
-	if 4 >= level {
-		errorLogger.Output(2, fmt.Sprintf(format, v...))
-	}
-}
-
-func Fatal(format string, v ...interface{}) {
-	if 5 >= level {
-		fatalLogger.Output(2, fmt.Sprintf(format, v...))
+	if buffWriter, ok := normalWriter.(*bufio.Writer); ok {
+		buffWriter.Flush()
 	}
 }
 
-func Traceln(v ...interface{}) {
-	if 0 >= level {
-		traceLogger.Output(2, fmt.Sprintln(v...))
-	}
+// Formatter implements logrus.Formatter interface
+type DefaultFormatter struct {
+	TimestampFormat  string
+	HostName         string
+	CallerPrettyfier func(f *runtime.Frame) (string, string)
 }
 
-func Debugln(v ...interface{}) {
-	if 1 >= level {
-		debugLogger.Output(2, fmt.Sprintln(v...))
+// Format building log message
+func (f *DefaultFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	var b *bytes.Buffer
+	if entry.Buffer != nil {
+		b = entry.Buffer
+	} else {
+		b = &bytes.Buffer{}
 	}
+
+	// time field
+	b.WriteString(entry.Time.Format(f.TimestampFormat))
+
+	// hostname field
+	b.WriteString("$$" + f.HostName)
+
+	// level field
+	b.WriteString("$$" + strings.ToUpper(entry.Level.String()))
+
+	// component field
+	b.WriteString("$$" + entry.Data["role"].(string))
+
+	_, fileVal := f.CallerPrettyfier(entry.Caller)
+	// file no
+	b.WriteString("$$" + fileVal)
+
+	// msg field
+	b.WriteString("$$" + entry.Message)
+
+	b.WriteByte('\n')
+	return b.Bytes(), nil
 }
 
-func Infoln(v ...interface{}) {
-	if 2 >= level {
-		infoLogger.Output(2, fmt.Sprintln(v...))
-	}
+func Fatalf(format string, args ...interface{}) {
+	Log.Fatalf(format, args...)
 }
 
-func Warnln(v ...interface{}) {
-	if 3 >= level {
-		warnLogger.Output(2, fmt.Sprintln(v...))
-	}
+func Fatal(args ...interface{}) {
+	Log.Fatal(args...)
 }
 
-func Errorln(v ...interface{}) {
-	if 4 >= level {
-		errorLogger.Output(2, fmt.Sprintln(v...))
-	}
+func Errorf(format string, args ...interface{}) {
+	Log.Errorf(format, args...)
 }
 
-func Fatalln(v ...interface{}) {
-	if 5 >= level {
-		fatalLogger.Output(2, fmt.Sprintln(v...))
+func Error(args ...interface{}) {
+	Log.Error(args...)
+}
+
+func Warnf(format string, args ...interface{}) {
+	Log.Warnf(format, args...)
+}
+
+func Warn(args ...interface{}) {
+	Log.Warn(args...)
+}
+
+func Infof(format string, args ...interface{}) {
+	Log.Infof(format, args...)
+}
+
+func Info(args ...interface{}) {
+	Log.Info(args...)
+}
+
+func Printf(format string, args ...interface{}) {
+	Log.Printf(format, args...)
+}
+
+func Print(args ...interface{}) {
+	Log.Print(args...)
+}
+
+func Debugf(format string, args ...interface{}) {
+	Log.Debugf(format, args...)
+}
+
+func Debug(args ...interface{}) {
+	Log.Debug(args...)
+}
+
+func findCaller() string {
+	var (
+		funcName = ""
+		file     = ""
+		line     = 0
+		pc       uintptr
+	)
+
+	// logrus + lfshook + log.go = 12
+	for i := 12; i < 15; i++ {
+		file, line, pc = getCaller(i)
+		// fileter logrus + lfshook + log.go
+		if strings.HasPrefix(file, "log/log.go") {
+			continue
+		}
+		if strings.HasPrefix(file, "logrus") {
+			continue
+		}
+		if strings.Contains(file, "lfshook.go") {
+			continue
+		}
+		break
 	}
+
+	fullFnName := runtime.FuncForPC(pc)
+
+	if fullFnName != nil {
+		fnNameStr := fullFnName.Name()
+		parts := strings.Split(fnNameStr, ".")
+		funcName = parts[len(parts)-1]
+	}
+
+	return fmt.Sprintf("%s:%d:%s()", file, line, funcName)
+}
+
+func getCaller(skip int) (string, int, uintptr) {
+	pc, file, line, ok := runtime.Caller(skip)
+	if !ok {
+		return "", 0, pc
+	}
+
+	n := 0
+
+	// get package name
+	for i := len(file) - 1; i > 0; i-- {
+		if file[i] == '/' {
+			n++
+			if n >= 2 {
+				file = file[i+1:]
+				break
+			}
+		}
+	}
+	return file, line, pc
+}
+
+func hanlePanicf(format string, args ...interface{}) {
 }
