@@ -15,6 +15,42 @@ import (
 
 const BufferSize = 8 * 1024 * 1024
 
+func WriteFile(fpath string, data []byte) error {
+	dir, err := filepath.Abs(filepath.Dir(fpath))
+	if err != nil {
+		return err
+	}
+
+	if _, err = os.Stat(dir); os.IsNotExist(err) {
+		err = os.Mkdir(dir, os.ModePerm)
+	}
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(fpath, data, 0666)
+}
+
+func ReadFile(path string) ([]byte, error) {
+	return ioutil.ReadFile(path)
+}
+
+func ListFileNames(path string) ([]string, error) {
+	var (
+		list = []string{}
+	)
+
+	fds, err := ioutil.ReadDir(path)
+	if err != nil {
+		return list, err
+	}
+
+	for _, f := range fds {
+		list = append(list, f.Name())
+	}
+	return list, nil
+}
+
 func CreateDirectory(dirPath string) error {
 	f, e := os.Stat(dirPath)
 	if e != nil && os.IsNotExist(e) {
