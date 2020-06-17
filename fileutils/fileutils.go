@@ -7,10 +7,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strings"
 	"syscall"
-
-	"gopkg.in/yaml.v2"
 )
 
 const BufferSize = 8 * 1024 * 1024
@@ -29,6 +29,31 @@ func WriteFile(fpath string, data []byte) error {
 	}
 
 	return ioutil.WriteFile(fpath, data, 0666)
+}
+
+func WriteFileWithForce(fname string, data []byte) error {
+	if strings.Index(fname, "~") == 0 {
+		u, err := user.Current()
+		if err != nil {
+			return err
+		}
+
+		fname = u.HomeDir + fname[1:]
+	}
+
+	dir, err := filepath.Abs(filepath.Dir(fname))
+	if err != nil {
+		return err
+	}
+
+	if _, err = os.Stat(dir); os.IsNotExist(err) {
+		err = os.Mkdir(dir, os.ModePerm)
+	}
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(fname, data, 0666)
 }
 
 func ReadFile(path string) ([]byte, error) {
@@ -218,17 +243,4 @@ func Md5Sum(name string) string {
 func GetSys(info os.FileInfo) (*syscall.Stat_t, bool) {
 	sys, ok := info.Sys().(*syscall.Stat_t)
 	return sys, ok
-}
-
-func LoadYaml(path string, out interface{}) error {
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	if err = yaml.Unmarshal(content, out); err != nil {
-		return fmt.Errorf("path:%s err:%s", path, err)
-	}
-
-	return nil
 }
