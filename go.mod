@@ -6,6 +6,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/fatih/color v1.9.0
+	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/karlseguin/ccache/v2 v2.0.6
@@ -18,4 +19,5 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
 	go.uber.org/automaxprocs v1.3.0
+	gotest.tools v2.2.0+incompatible
 )
