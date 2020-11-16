@@ -18,6 +18,8 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/automaxprocs v1.3.0
+	go.uber.org/ratelimit v0.1.0
 	gotest.tools v2.2.0+incompatible
 )
