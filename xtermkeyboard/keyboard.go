@@ -13,6 +13,8 @@ var (
 	KeyboardTypeSpace   KeyboardType = "space"
 	KeyboardTypeTab     KeyboardType = "tab"
 	KeyboardTypeEsc     KeyboardType = "esc"
+	KeyboardTypeCtrlC   KeyboardType = "ctrl-c"
+	KeyboardTypeCtrlD   KeyboardType = "ctrl-d"
 	KeyboardTypeUp      KeyboardType = "up"
 	KeyboardTypeDown    KeyboardType = "down"
 	KeyboardTypeLeft    KeyboardType = "left"
@@ -28,6 +30,8 @@ var (
 	keyboardCodeSpace  = "20"
 	keyboardCodeTab    = "09"
 	keyboardCodeEsc    = "1b"
+	keyboardCodeCtrlC  = "03"
+	keyboardCodeCtrlD  = "04"
 	keyboardCodeUp     = "1b5b41"
 	keyboardCodeDown   = "1b5b42"
 	keyboardCodeRight  = "1b5b43"
@@ -57,6 +61,10 @@ func GetCode(bs []byte) KeyboardType {
 		return KeyboardTypeTab
 	case keyboardCodeEsc:
 		return KeyboardTypeEsc
+	case keyboardCodeCtrlD:
+		return KeyboardTypeCtrlD
+	case keyboardCodeCtrlC:
+		return KeyboardTypeCtrlC
 	case keyboardCodeUp:
 		return KeyboardTypeUp
 	case keyboardCodeDown:
@@ -100,6 +108,20 @@ func IsKeyboardTab(bs []byte) bool {
 
 func IsKeyboardEsc(bs []byte) bool {
 	if bytes.Equal(ToCode(bs), []byte(keyboardCodeEsc)) {
+		return true
+	}
+	return false
+}
+
+func IsKeyboardCtrlD(bs []byte) bool {
+	if bytes.Equal(ToCode(bs), []byte(keyboardCodeCtrlD)) {
+		return true
+	}
+	return false
+}
+
+func IsKeyboardCtrlC(bs []byte) bool {
+	if bytes.Equal(ToCode(bs), []byte(keyboardCodeCtrlC)) {
 		return true
 	}
 	return false
