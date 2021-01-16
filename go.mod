@@ -21,5 +21,6 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/automaxprocs v1.3.0
 	go.uber.org/ratelimit v0.1.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	gotest.tools v2.2.0+incompatible
 )
