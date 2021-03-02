@@ -89,6 +89,14 @@ func NewAtomicBool(n bool) AtomicBool {
 	return AtomicBool{0}
 }
 
+func (i *AtomicBool) SetTrue() bool {
+	return atomic.CompareAndSwapInt32(&i.int32, 0, 1)
+}
+
+func (i *AtomicBool) SetFalse() bool {
+	return atomic.CompareAndSwapInt32(&i.int32, 1, 0)
+}
+
 func (i *AtomicBool) Set(n bool) {
 	if n {
 		atomic.StoreInt32(&i.int32, 1)
@@ -97,8 +105,16 @@ func (i *AtomicBool) Set(n bool) {
 	}
 }
 
+func (i *AtomicBool) IsTrue() bool {
+	return atomic.LoadInt32(&i.int32) == 1
+}
+
+func (i *AtomicBool) IsFalse() bool {
+	return atomic.LoadInt32(&i.int32) == 0
+}
+
 func (i *AtomicBool) Get() bool {
-	return atomic.LoadInt32(&i.int32) != 0
+	return atomic.LoadInt32(&i.int32) == 1
 }
 
 func (i *AtomicBool) CompareAndSwap(o, n bool) bool {
