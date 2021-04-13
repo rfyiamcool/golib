@@ -8,6 +8,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
+	github.com/jimlawless/whereami v0.0.0-20160417220522-aebf70d4a772
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/karlseguin/ccache/v2 v2.0.6
 	github.com/lestrrat-go/file-rotatelogs v2.3.0+incompatible
