@@ -1,6 +1,7 @@
-package dump
+package spews
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
@@ -62,12 +63,36 @@ func Debug(v ...interface{}) {
 	color.Green(s)
 }
 
+func Alert(v ...interface{}) {
+	s := fmt.Sprintln(v...)
+	color.HiBlue(s)
+}
+
 func Debugf(format string, v ...interface{}) {
 	color.Green(format, v...)
 }
 
-func Dump(v ...interface{}) {
-	s := spew.Sdump(v...)
+func JsonDump(vlist ...interface{}) {
+	file, no, funcName := getCaller(2)
+	for _, v := range vlist {
+		bs, _ := json.Marshal(v)
+		color.Magenta("file: %s line: %d, funcname: %s, message: %s", file, no, funcName, string(bs))
+	}
+}
+
+func Dump(vlist ...interface{}) {
+	var values []interface{}
+
+	for _, v := range vlist {
+		switch v.(type) {
+		case []byte:
+			values = append(values, string(v.([]byte)))
+		default:
+			values = append(values, v)
+		}
+	}
+
+	s := spew.Sdump(values...)
 	file, no, funcName := getCaller(2)
 	color.Magenta("file: %s line: %d, funcname: %s, message: %s", file, no, funcName, s)
 }
@@ -78,6 +103,7 @@ func Stack(v ...interface{}) {
 	Debug(v...)
 }
 
+// getCaller get filename, line, fucntion name
 func getCaller(skip int) (string, int, string) {
 	pc, file, line, ok := runtime.Caller(skip)
 	if !ok {
@@ -112,6 +138,7 @@ func getCaller(skip int) (string, int, string) {
 	return file, line, funcName
 }
 
+// getStack get full function stack
 func getStack() string {
 	buf := make([]byte, 4096)
 	n := runtime.Stack(buf, false)
