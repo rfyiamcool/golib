@@ -4,27 +4,27 @@ import (
 	"sync"
 )
 
-type set struct {
+type Intset struct {
 	needLock bool
 	sync.RWMutex
 
-	data map[string]bool
+	data map[int]bool
 }
 
-func NewSet() *set {
-	return &set{
-		data: make(map[string]bool),
+func NewIntset() *Intset {
+	return &Intset{
+		data: make(map[int]bool),
 	}
 }
 
-func NewSetSafe() *set {
-	return &set{
-		data:     make(map[string]bool),
+func NewIntsetSafe() *Intset {
+	return &Intset{
+		data:     make(map[int]bool),
 		needLock: true,
 	}
 }
 
-func (s *set) Add(value string) {
+func (s *Intset) Add(value int) {
 	if s.needLock {
 		s.Lock()
 		defer s.Unlock()
@@ -33,7 +33,7 @@ func (s *set) Add(value string) {
 	s.data[value] = true
 }
 
-func (s *set) Remove(value string) {
+func (s *Intset) Remove(value int) {
 	if s.needLock {
 		s.Lock()
 		defer s.Unlock()
@@ -42,22 +42,22 @@ func (s *set) Remove(value string) {
 	delete(s.data, value)
 }
 
-func (s *set) Contains(value string) (exists bool) {
+func (s *Intset) Exists(value int) (existed bool) {
 	if s.needLock {
 		s.RLock()
 		defer s.RUnlock()
 	}
 
-	_, exists = s.data[value]
+	_, existed = s.data[value]
 	return
 }
 
-func (s *set) Length() int {
+func (s *Intset) Length() int {
 	// don't need lock
 	return len(s.data)
 }
 
-func (s *set) Values() (values []string) {
+func (s *Intset) Values() (values []int) {
 	if s.needLock {
 		s.RLock()
 		defer s.RUnlock()
