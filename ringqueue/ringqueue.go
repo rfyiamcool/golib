@@ -70,7 +70,7 @@ func (q *RingQueue) Peek() interface{} {
 	defer q.RUnlock()
 
 	if q.count <= 0 {
-		panic("queue: Peek() called on empty queue")
+		return nil
 	}
 	return q.buf[q.head]
 }
@@ -83,7 +83,7 @@ func (q *RingQueue) Get(i int) interface{} {
 		i += q.count
 	}
 	if i < 0 || i >= q.count {
-		panic("queue: Get() called with index out of range")
+		return nil
 	}
 
 	return q.buf[(q.head+i)&(len(q.buf)-1)]
@@ -94,7 +94,7 @@ func (q *RingQueue) Remove() interface{} {
 	defer q.Unlock()
 
 	if q.count <= 0 {
-		panic("queue: Remove() called on empty queue")
+		return nil
 	}
 
 	ret := q.buf[q.head]
